@@ -1,16 +1,23 @@
 var express = require('express');
 var router = express.Router();
-var authenticate = require('../authenticate');
 
 const bodyParser = require('body-parser');
 var User = require('../models/user');
+
 var passport = require('passport');
+var authenticate = require('../authenticate');
 
 router.use(bodyParser.json());
 
 /* GET users listing. */
-router.get('/', function(req, res, next) {
-  res.send('respond with a resource');
+router.get('/', authenticate.verifyUser, authenticate.verifyAdmin, (req,res,next) => {
+  User.find({})
+  .then((users) => {
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json');
+      res.json(users);
+  }, (err) => next(err))
+  .catch((err) => next(err));
 });
 
 router.post('/signup', (req, res, next) => {
@@ -43,45 +50,12 @@ router.post('/signup', (req, res, next) => {
   });
 });
 
-router.post('/login', passport.authenticate('local'), (req, res) => {
-
+router.post('/login', passport.authenticate('local'), (req, res) => {  
   var token = authenticate.getToken({_id: req.user._id});
   res.statusCode = 200;
   res.setHeader('Content-Type', 'application/json');
   res.json({success: true, token: token, status: 'You are successfully logged in!'});
 });
-  
-    /* var auth = new Buffer(authHeader.split(' ')[1], 'base64').toString().split(':');
-    var username = auth[0];
-    var password = auth[1];
-  
-    User.findOne({username: username})
-    .then((user) => {
-      if (user.username === username && user.password === password) {
-        req.session.user = 'authenticated';
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'text/plain');
-        res.end('You are authenticated!')
-      }
-      else if (user.password !== password) {
-        var err = new Error('Your password is incorrect!');
-        err.status = 403;
-        return next(err);
-      }
-      else if (user === null) {
-        var err = new Error('User ' + username + ' does not exist!');
-        err.status = 403;
-        return next(err);
-      }
-    })
-    .catch((err) => next(err)); */
-  // }
-  // else {
-  //   res.statusCode = 200;
-  //   res.setHeader('Content-Type', 'text/plain');
-  //   res.end('You are already authenticated!');
-  // }
-// })
 
 router.get('/logout', (req, res) => {
   if (req.session) {
